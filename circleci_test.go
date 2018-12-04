@@ -623,6 +623,49 @@ func TestClient_ListEnvVars(t *testing.T) {
 	}
 }
 
+func TestClient_GetEnvVAR_present(t *testing.T) {
+	setup()
+	defer teardown()
+	mux.HandleFunc("/project/myVcs/jszwedko/foo/envvar/bar", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testBody(t, r, "")
+		fmt.Fprint(w, `{"name": "bar", "value":"xxxbar"}`)
+	})
+
+	status, err := client.GetEnvVar("myVcs", "jszwedko", "foo", "bar")
+	if err != nil {
+		t.Errorf(`client.GetEnvVar("myVcs", "jszwedko", "foo", "bar") returned error: %v`, err)
+	}
+
+	want := &EnvVar{Name: "bar", Value: "xxxbar"}
+
+	if !reflect.DeepEqual(status, want) {
+		t.Errorf(`client.GetEnvVar("myVcs", "jszwedko", "foo", "bar") returned %+v, want %+v`, status, want)
+	}
+}
+
+func TestClient_GetEnvVAR_absent(t *testing.T) {
+	setup()
+	defer teardown()
+	mux.HandleFunc("/project/myVcs/jszwedko/foo/envvar/bar", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		testBody(t, r, "")
+		fmt.Fprint(w, `{"message":"env var not found"}`)
+		w.WriteHeader(http.StatusNotFound)
+	})
+
+	status, err := client.GetEnvVar("myVcs", "jszwedko", "foo", "bar")
+	if err != nil {
+		t.Errorf(`client.GetEnvVar("myVcs", "jszwedko", "foo", "bar") returned error: %v`, err)
+	}
+
+	want := &EnvVar{}
+
+	if !reflect.DeepEqual(status, want) {
+		t.Errorf(`client.GetEnvVar("myVcs", "jszwedko", "foo", "bar") returned %+v, want %+v`, status, want)
+	}
+}
+
 func TestClient_DeleteEnvVar(t *testing.T) {
 	setup()
 	defer teardown()

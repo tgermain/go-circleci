@@ -35,7 +35,7 @@ type APIError struct {
 	Message        string
 }
 
-func (e *APIError) Error() string {
+func (e APIError) Error() string {
 	return fmt.Sprintf("%d: %s", e.HTTPStatusCode, e.Message)
 }
 
@@ -421,6 +421,30 @@ func (c *Client) AddEnvVar(vcsType, account, repo, name, value string) (*EnvVar,
 	}
 
 	return envVar, nil
+}
+
+// GetEnvVar get an environment variable from a specified project
+// Returns the environment variable (the value will be masked).
+// If an environment variable with that name does not exists, it returns an empty environment variable
+func (c *Client) GetEnvVar(vcsType, account, repo, name string) (*EnvVar, error) {
+	envVar := EnvVar{}
+	err := c.request("GET", fmt.Sprintf("project/%s/%s/%s/envvar/%s", vcsType, account, repo, name), &envVar, nil, nil)
+	if err != nil {
+
+		typedErr, ok := err.(*APIError)
+		if !ok {
+			return nil, err
+		}
+		// if error is 404 and the message is {"message":"env var not found"}
+		// we can assume the environment variable is not found and return an empty structure
+		if typedErr.HTTPStatusCode == 404 && typedErr.Message == "env var not found" {
+			return &envVar, nil
+		}
+		return nil, err
+
+	}
+
+	return &envVar, nil
 }
 
 // ListEnvVars list environment variable to the specified project
