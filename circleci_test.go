@@ -580,7 +580,7 @@ func TestClient_ClearCache(t *testing.T) {
 	}
 }
 
-func TestClient_AddEnvVar(t *testing.T) {
+func TestClient_AddEnvVar_validName(t *testing.T) {
 	setup()
 	defer teardown()
 	mux.HandleFunc("/project/myVcs/jszwedko/foo/envvar", func(w http.ResponseWriter, r *http.Request) {
@@ -597,6 +597,21 @@ func TestClient_AddEnvVar(t *testing.T) {
 	want := &EnvVar{Name: "bar"}
 	if !reflect.DeepEqual(status, want) {
 		t.Errorf("Client.AddEnvVar(jszwedko, foo, bar, baz) returned %+v, want %+v", status, want)
+	}
+}
+func TestClient_AddEnvVar_invalidName(t *testing.T) {
+	expectedError := "environment variable name is not valid"
+	setup()
+	defer teardown()
+
+	_, err := client.AddEnvVar("myVcs", "jszwedko", "foo", "--invalid--", "baz")
+
+	if err != nil {
+		if err.Error() != expectedError {
+			t.Errorf("Client.AddEnvVar(jszwedko, foo, --invalid--, baz) returned unexpectederror: %v", err)
+		}
+	} else {
+		t.Error("Client.AddEnvVar(jszwedko, foo, --invalid--, baz) should raise an error as the variable name is invalid")
 	}
 }
 
@@ -915,4 +930,30 @@ func TestClient_AddHerokuKey(t *testing.T) {
 	if err != nil {
 		t.Errorf("Client.AddHerokuKey(53433a12-9c99-11e5-97f5-1458d009721) returned error: %v", err)
 	}
+}
+
+var validateEnvVarNameTestCases = []struct {
+	in       string
+	expected bool
+}{
+	{"nominal", true},
+	{"withnumber1", true},
+	{"withUnderscore_", true},
+	{"invalidCharacter---", false},
+	{"1invalidStartWithNumber", false},
+}
+
+func Test_ValidateEnvVarName(t *testing.T) {
+	for _, testCase := range validateEnvVarNameTestCases {
+		t.Run(testCase.in, func(t *testing.T) {
+			res := ValidateEnvVarName(testCase.in)
+			if res != testCase.expected {
+				t.Errorf("got %t, want %t", res, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestFlagParser(t *testing.T) {
+
 }
